@@ -1,0 +1,44 @@
+# LAB 05 — Sequence Models: RNN, LSTM and GRU
+
+
+## Cấu hình và tính công bằng của thí nghiệm
+
+- Dùng toàn bộ IMDb có nhãn từ revision `e6281661ce1c48d982bc483cf8a173c1bbeb5d31`; hai parquet được kiểm tra SHA256. Không dùng unsupervised split.
+- Dùng lại chính xác manifest LAB04 sau clean/deduplicate: **19.920 train / 4.981 validation / 24.675 test**. Kiểm tra sample ID, nhãn, document key và không trùng token document giữa split. Giữ manifest và bản kết quả LAB04 trong `data/` để chạy độc lập.
+- Tokenizer giữ negation, vocabulary fit **train only**, tối đa 20.000 gồm PAD/UNK, min count 2. Word embeddings được học cùng classifier, không dùng pretrained.
+- Seed 42; embedding 64, hidden 64, 1 layer, unidirectional, batch 128, Adam lr 0.001, 6 epochs, gradient clipping 1.0. Các model dùng cùng embedding initialization, cùng thứ tự batch theo seed, cùng split. Tham số recurrent khác nhau được báo cáo thay vì cố ép bằng nhau.
+- Thí nghiệm kiến trúc dùng length=100; thí nghiệm độ dài cố định RNN, length=50/100/200, reset cùng seed/cấu hình. **Mục 13 chạy đủ ba RNN và xuất bảng yêu cầu tại chỗ. Mục 14 kiểm tra RNN cell. Mục 15 chạy baseline và xuất bảng so sánh, probes/hoán vị TF-IDF vs RNN tại chỗ. Mục 19 chạy LSTM/GRU và xuất đầy đủ bảng so sánh ba kiến trúc. Mục 20 dùng ba run RNN mục 13 để xuất bảng mở rộng và hai đồ thị đúng mục.** RNN100 được tái sử dụng trong các so sánh; không train lặp rồi chọn lần tốt hơn.
+- Right truncation giữ **prefix**; padding bên phải theo batch. Dùng packed sequences và hidden state cuối cùng hợp lệ; kiểm tra thêm padding không đổi logits. `% tokens retained` là tổng token giữ / tổng token gốc, tính riêng từng split; không nhầm với tỷ lệ review không bị cắt.
+- Tất cả model train đủ 6 epochs; checkpoint chọn **minimum validation loss**. Mọi hyperparameter và tập thí nghiệm cố định trước mục 13. Primary model chọn bằng validation F1 trong RNN/LSTM/GRU length100; application chọn bằng validation F1 trong LSTM/GRU length100 tại mục 19. Để có bảng đúng thứ tự đề, RNN được báo cáo test tại mục 13, baseline tại mục 15 và LSTM/GRU tại mục 19; không dùng bất kỳ test metric nào cho lựa chọn. Cell 22 tổng hợp evaluation của tất cả cấu hình vào `results.csv` và confusion matrices. Các bảng test/validation ghi rõ split, không dời kết quả bắt buộc của mục trước sang mục sau.
+- Baseline TF-IDF unigram+LR dùng đúng cấu hình LAB04: cap 20.000, min_df=2, sublinear TF, C=1, liblinear, giữ negation. Baseline dùng toàn văn; sequence models chỉ dùng prefix đã cấu hình. Đây là so sánh pipeline, cần người học xét giới hạn này khi nhận xét. Không dùng test chọn C.
+- Chỉ báo cáo một seed, không phải kết luận thống kê trên nhiều lần chạy. Thí nghiệm cue/hoán vị đo hành vi của các model đã train; không chứng minh nguyên nhân lỗi hay vanishing gradient.
+
+Training time neural = tổng thời gian training batches qua 6 epochs, có đồng bộ CUDA, không cộng validation/checkpoint/evaluation; `validation_time_seconds` và `fit_wall_seconds` lưu riêng. LR time = TF-IDF fit_transform train + classifier.fit, không gồm test transform. Baseline epochs không áp dụng nên để trống, solver iterations lưu riêng. Các cột precision/recall/F1 chính dùng positive=1, threshold=0.5; có thêm macro F1 và per-class metrics.
+
+
+
+## Viết tay, scan và chèn vào Markdown
+
+Tự viết theo câu hỏi để trống tại bốn Markdown:
+
+- `calculations.md` → `calculations_scan.pdf`: mục 6 và 17.
+- `prediction.md` → `prediction_scan.pdf`: 5 prediction mục 10 đã viết trước training; giữ nguyên prediction ban đầu.
+- `error_analysis.md` → `error_analysis_scan.pdf`: mục 24; kèm diễn giải confusion matrix/evaluation liên quan.
+- `reflection.md` → `reflection_scan.pdf`: các phần giải thích/nhận xét còn lại theo checklist trong file.
+
+
+## Deliverables và trạng thái
+
+Mục 29 yêu cầu: `README.md`, `calculations.md`, `prediction.md`, `rnn_cell.py`, `sequence_classification.ipynb`, `results.csv`, `learning_curves.png`, `confusion_matrix.png`, `error_analysis.md`, `reflection.md`.
+
+Giữ thêm `preprocessing.py`, `sequence_utils.py`, `requirements.txt`, `prediction_confirmation.json`, `data/`, `outputs/` để notebook chạy lại và có evidence. Checkpoints trong `outputs/checkpoints/` phục vụ application; dữ liệu/cache/model là file hỗ trợ, không phải file đề liệt kê riêng.
+
+Trạng thái kỹ thuật sau khi chạy được ghi ở `outputs/verification.json` và `outputs/notebook_verification.json`; cấu hình/checksums ở `outputs/run_metadata.json`. **Phần bài nộp chỉ hoàn chỉnh khi người học tự hoàn thành bốn PDF scan và có thể giải thích code.** Không xem output máy sinh là phần nhận xét đã làm.
+
+## AI assistance statement — mục 27
+
+- **Tool:** ChatGPT 
+- **Purpose:** Hỗ trợ preprocessing, debugging và kiểm tra kỹ thuật.
+- **Generated:** `rnn_cell.py`, `sequence_utils.py`, CSV/hình/checkpoint do code thực thi sinh ra.
+
+Không dùng AI thay prediction, calculation, giải thích RNN forward pass/LSTM gates, chọn nguyên nhân error, interpretation learning curves, reflection hoặc individual learning check.
